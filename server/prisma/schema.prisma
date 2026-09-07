@@ -1,0 +1,592 @@
+// EcoSprint Prisma Schema
+// PostgreSQL database schema for the full-stack sustainability platform.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  LEARNER
+  MENTOR
+  COMPANY
+  ADMIN
+}
+
+enum SprintStatus {
+  ADMISSIONS_OPEN
+  UPCOMING
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum LessonType {
+  VIDEO
+  LAB
+  READING
+  PROJECT
+  ASSESSMENT
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CredentialStatus {
+  VERIFIED
+  REVOKED
+}
+
+enum NotificationType {
+  ENROLLMENT
+  LESSON
+  PROJECT
+  CREDENTIAL
+  LINKEDIN
+  MENTOR
+  SYSTEM
+}
+
+enum ActivityType {
+  ENROLLED
+  LESSON_COMPLETED
+  SPRINT_COMPLETED
+  CREDENTIAL_EARNED
+  PROJECT_SUBMITTED
+  LINKEDIN_CONNECTED
+}
+
+enum LinkedinSyncStatus {
+  NOT_CONNECTED
+  PENDING
+  SUCCESS
+  FAILED
+  NOT_SUPPORTED
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+
+// ============================================================
+// USER & PROFILE
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          Role      @default(LEARNER)
+  avatar        String?
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  refreshToken  String?
+  refreshTokenExpiresAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile            Profile?
+  mentorProfile      MentorProfile?
+  company            Company?
+  enrollments        Enrollment[]
+  lessonProgress     LessonProgress[]
+  projectSubmissions ProjectSubmission[]
+  credentials        Credential[]
+  savedSprints       SavedSprint[]
+  savedJobs          SavedJob[]
+  notifications      Notification[]
+  activity           Activity[]
+  linkedinConnection LinkedInConnection?
+  assessments        AssessmentResult[]
+  mentorSessions     MentorSession[] @relation("MentorSessions")
+  learnerSessions    MentorSession[] @relation("LearnerSessions")
+  reviewsSubmitted   ProjectReview[] @relation("Reviewer")
+  submissionsReviewed ProjectReview[] @relation("SubmissionReviewer")
+
+  @@index([role])
+  @@index([email])
+}
+
+model Profile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  headline      String?
+  bio           String?
+  location      String?
+  company       String?
+  cohortName    String?
+  skills        String[] @default([])
+  interests     String[] @default([])
+  completedSprintIds String[] @default([])
+  achievements  Json?    @default("{}")
+  preferences   Json?    @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================
+// SPRINTS & CURRICULUM
+// ============================================================
+
+model Sprint {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  title          String
+  tagline        String
+  track          String
+  category       String
+  level          String
+  durationWeeks  Int
+  hoursPerWeek   Int
+  cohortStartDate DateTime?
+  cohortSize     Int          @default(20)
+  enrolledCount  Int          @default(0)
+  price          Int          @default(2499) // INR
+  mentorId       String?
+  mentorName     String?
+  mentorRole     String?
+  rating         Float        @default(0)
+  reviewCount    Int          @default(0)
+  featured       Boolean      @default(false)
+  popular        Boolean      @default(false)
+  status         SprintStatus @default(ADMISSIONS_OPEN)
+  statusLabel    String       @default("Admissions Open")
+  skills         String[]     @default([])
+  labsCount      Int          @default(0)
+  description    String
+  learningOutcomes String[]   @default([])
+  coverImage     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  modules         SprintModule[]
+  enrollments     Enrollment[]
+  projects        Project[]
+  savedBy         SavedSprint[]
+
+  @@index([track])
+  @@index([level])
+  @@index([status])
+  @@index([featured])
+  @@index([popular])
+}
+
+model SprintModule {
+  id        String  @id @default(cuid())
+  sprintId  String
+  week      Int
+  title     String
+  description String?
+  order     Int     @default(0)
+  createdAt DateTime @default(now())
+
+  sprint  Sprint  @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([sprintId, week])
+  @@index([sprintId])
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  moduleId    String
+  title       String
+  type        LessonType @default(READING)
+  duration    String?
+  description String?
+  order       Int        @default(0)
+  videoPlaceholder String?
+  videoUrl    String?
+  notes       String?
+  practicalExample String?
+  quiz        Json?
+  resources   Json?
+  takeaways   String[]   @default([])
+  task        String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  module        SprintModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessonProgress LessonProgress[]
+
+  @@index([moduleId])
+}
+
+// ============================================================
+// ENROLLMENT & PROGRESS
+// ============================================================
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  sprintId    String
+  status      EnrollmentStatus @default(ACTIVE)
+  progress    Int              @default(0)
+  currentLessonId String?
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sprintId])
+  @@index([sprintId])
+  @@index([status])
+}
+
+model LessonProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String
+  sprintId  String
+  completed Boolean  @default(false)
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId, sprintId])
+  @@index([sprintId])
+}
+
+model AssessmentResult {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String
+  score     Int
+  passed    Boolean  @default(false)
+  submittedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lessonId])
+}
+
+// ============================================================
+// MENTORS
+// ============================================================
+
+model MentorProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  name           String
+  role           String
+  expertise      String
+  domain         String
+  experienceYears Int
+  avatar         String?
+  bio            String?
+  location       String?
+  cohortsMentored Int      @default(0)
+  rating         Float    @default(0)
+  sprintIds      String[] @default([])
+  sprintTitles   String[] @default([])
+  officeHoursAvailable Boolean @default(true)
+  upcomingSession String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions MentorSession[]
+}
+
+model MentorSession {
+  id        String   @id @default(cuid())
+  mentorUserId String
+  learnerUserId String?
+  sprintId  String?
+  title     String
+  date      DateTime?
+  attendees Int      @default(0)
+  link     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mentor User  @relation("MentorSessions", fields: [mentorUserId], references: [id], onDelete: Cascade)
+  learner User? @relation("LearnerSessions", fields: [learnerUserId], references: [id], onDelete: SetNull)
+}
+
+// ============================================================
+// PROJECTS & SUBMISSIONS
+// ============================================================
+
+model Project {
+  id             String        @id @default(cuid())
+  title          String
+  sprintId       String
+  sprintTitle    String
+  difficulty     String        @default("Intermediate")
+  estimatedHours Int           @default(20)
+  status         ProjectStatus @default(IN_PROGRESS)
+  progress       Int           @default(0)
+  rubricScore    Int?
+  dueDate        DateTime?
+  clientScenario String?
+  learningObjectives String[]  @default([])
+  requirements   String[]      @default([])
+  resources      Json?         @default("[]")
+  deliverables   String[]      @default([])
+  skillsDemonstrated String[]  @default([])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sprint      Sprint             @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  submissions ProjectSubmission[]
+  reviews     ProjectReview[]
+
+  @@index([sprintId])
+  @@index([status])
+}
+
+model ProjectSubmission {
+  id        String           @id @default(cuid())
+  projectId String
+  userId    String
+  status    SubmissionStatus @default(PENDING)
+  submissionText String?
+  fileName  String?
+  filePath  String?
+  fileSize  String?
+  fileType  String?
+  notes     String?
+  submittedAt DateTime       @default(now())
+  reviewedAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review  ProjectReview?
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([status])
+}
+
+model ProjectReview {
+  id           String   @id @default(cuid())
+  projectId    String
+  submissionId String   @unique
+  reviewerId   String
+  rating       Int
+  strengths    String?
+  improvementAreas String?
+  feedback     String?
+  reviewedAt   DateTime @default(now())
+
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submission ProjectSubmission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer   User               @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([reviewerId])
+}
+
+// ============================================================
+// CREDENTIALS
+// ============================================================
+
+model Credential {
+  id             String           @id @default(cuid())
+  credentialId   String           @unique
+  verificationHash String          @unique
+  title          String
+  recipientName  String
+  userId         String
+  issuedDate     DateTime         @default(now())
+  status         CredentialStatus @default(VERIFIED)
+  sprintId       String?
+  sprintTitle    String
+  grade          String?
+  skills         String[]         @default([])
+  issuingMentor  String
+  credentialType String           @default("Professional Cohort Certificate")
+  expiryDate     String           @default("Perpetual")
+  description    String
+  linkedinSyncStatus LinkedinSyncStatus @default(NOT_CONNECTED)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sprintId])
+}
+
+// ============================================================
+// COMPANIES & JOBS
+// ============================================================
+
+model Company {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String
+  description String?
+  sector      String?
+  location    String?
+  website     String?
+  employeeCount Int     @default(0)
+  seatAllocation Int   @default(25)
+  logo        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs       Job[]
+}
+
+model Job {
+  id              String  @id @default(cuid())
+  companyId       String
+  title           String
+  company         String
+  companyDescription String?
+  location        String?
+  locationType    String?
+  type            JobType @default(FULL_TIME)
+  experienceLevel String?
+  salary          String?
+  postedDaysAgo   Int     @default(0)
+  department      String?
+  description     String?
+  responsibilities String[] @default([])
+  requirements    String[] @default([])
+  requiredSkills  String[] @default([])
+  matchedSkills   String[] @default([])
+  matchPercentage Int     @default(0)
+  hiringManager   String?
+  featured        Boolean @default(false)
+  isActive        Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  savedBy  SavedJob[]
+
+  @@index([companyId])
+  @@index([featured])
+  @@index([isActive])
+}
+
+// ============================================================
+// SAVED ITEMS
+// ============================================================
+
+model SavedSprint {
+  id        String   @id @default(cuid())
+  userId    String
+  sprintId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sprintId])
+  @@index([userId])
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+}
+
+// ============================================================
+// NOTIFICATIONS & ACTIVITY
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(SYSTEM)
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  userId    String
+  type      ActivityType
+  title     String
+  description String?
+  metadata  Json?        @default("{}")
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ============================================================
+// LINKEDIN
+// ============================================================
+
+model LinkedInConnection {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  linkedinUserId String?
+  profileUrl  String?
+  accessToken String?
+  refreshToken String?
+  tokenExpiresAt DateTime?
+  connectedAt DateTime?
+  syncStatus  LinkedinSyncStatus @default(NOT_CONNECTED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

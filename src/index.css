@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-forest-accent: #142310;
+    --color-charcoal-primary: #142619;
+    --color-sand-bg: #f4f8f2;
+  }
+
+  .dark {
+    --color-forest-accent: #a3c998;
+    --color-charcoal-primary: #eef4ea;
+    --color-sand-bg: #0a130d;
+  }
+
+  html {
+    color-scheme: light;
+    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #f4f8f2;
+    color: #142619;
+    letter-spacing: -0.24px;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dark body {
+    background-color: #0a130d;
+    color: #eef4ea;
+  }
+
+  /* Accessible focus indicators — EcoSprint green accent, 2px offset per spec */
+  :focus-visible {
+    outline: 2px solid #3c632f;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .dark :focus-visible {
+    outline-color: #7bae6f;
+  }
+}
+
+/* Subtle green-tinted scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e4ede0;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #142619;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b9cdb0;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3a4c36;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #96aa8d;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4c6045;
+}
+
+/* Smooth micro-interaction animations (spec easing: cubic-bezier(0.16, 1, 0.3, 1)) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Respect user's motion preferences — instant transitions per spec */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
