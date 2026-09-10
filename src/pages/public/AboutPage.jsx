@@ -2,30 +2,16 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import {
   Target,
-  Zap,
   ShieldCheck,
   ArrowRight,
-  TrendingUp,
-  Cpu,
-  Users,
-  Compass,
-  CheckCircle2,
-  Calendar,
-  Sparkles
+  Cpu
 } from 'lucide-react'
 import { Container } from '../../components/ui/Container'
 import { SectionHeading } from '../../components/ui/SectionHeading'
 import { Card } from '../../components/ui/Card'
-import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 
 export const AboutPage = () => {
-  const timeline = [
-    { year: '2024', title: 'The Skills Gap Identified', desc: 'Enterprise carbon auditors notice that fewer than 8% of applicants have ever built an auditable Scope 1-3 model.' },
-    { year: '2025', title: 'Cohort Pilot with 120 Fellows', desc: 'First 3-week Carbon Accounting and Circular Design sprints tested with 94% completion and 100% capstone delivery.' },
-    { year: '2026', title: 'Next-Gen Upskilling Platform', desc: 'Launch of EcoSprint platform with interactive simulation labs, practitioner-led mentorship, and career network.' }
-  ]
-
   return (
     <div className="py-12 sm:py-16 space-y-20 transition-colors duration-200">
       {/* 1. MISSION & HEADER */}
@@ -132,32 +118,6 @@ export const AboutPage = () => {
                 Capstone evaluations follow ISAE 3000 assurance standards. When an EcoSprint graduate receives a certificate, employers know it was earned.
               </p>
             </Card>
-          </div>
-        </Container>
-      </section>
-
-      {/* 4. TIMELINE FLOW */}
-      <section className="bg-sand-100/50 dark:bg-charcoal-900/50 py-16 border-y border-charcoal-200/80 dark:border-charcoal-800">
-        <Container size="default">
-          <SectionHeading
-            tag="Our Journey"
-            title="The Evolution of EcoSprint"
-            description="From early auditor frustration to an agile green skills platform."
-            align="center"
-          />
-
-          <div className="max-w-3xl mx-auto space-y-6 pt-4">
-            {timeline.map((item, idx) => (
-              <div key={idx} className="flex items-start gap-5 p-5 rounded-xl bg-white dark:bg-charcoal-900 border border-charcoal-200 dark:border-charcoal-800 shadow-subtle">
-                <span className="text-sm font-bold font-mono text-forest-700 dark:text-forest-400 bg-forest-50 dark:bg-forest-950/60 px-2.5 py-1 rounded border border-forest-200 dark:border-forest-800/80 shrink-0">
-                  {item.year}
-                </span>
-                <div className="space-y-1">
-                  <h4 className="text-base font-bold text-charcoal-950 dark:text-charcoal-100">{item.title}</h4>
-                  <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </Container>
       </section>
